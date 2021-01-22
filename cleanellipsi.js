@@ -4,9 +4,11 @@ let can,cv,mX,mY,ang=0;
 let cW=0,cH=0;
 let Cselect; //Circulo seleccionado actualmente
 let Aselect; //Circulo con la flecha seleccionada actualmente
+let WrittingTo={}; //Objecto que dice en dónde se está escribiendo
 let moving; //Booleano, Si estamos moviendo algún elemento
 let arrowSelected; //Índice (interno) del círculo cuya flecha está seleccionada
 let gDeletedIndex; //Índice global del círculo elminado
+let aDeletedIndex;
 let circles=[]; //Arreglo global de círculos
 
 let A,B; //Círculos A y B temporales, a unir con una flecha
@@ -50,8 +52,19 @@ function loadCanvas(){
 	}
 	
 	can.ondblclick=function(ev){
-		if(ev.button==0)
-			circles.push(new Circle(35,mX,mY,circles.length));
+		if(ev.button==0){
+			if(Cselect===undefined)
+				circles.push(new Circle(35,mX,mY,circles.length));
+			else if(Cselect!==undefined){
+				if(Cselect.type===0)
+					Cselect.type=1;
+				else if(Cselect.type===1)
+					Cselect.type=2;
+				else if(Cselect.type===2)
+					Cselect.type=0;
+			}
+			
+		}
 		updateCanvas();
 	}
 		
@@ -76,10 +89,19 @@ function loadCanvas(){
 			else
 				Aselect.connections[arrowSelected][1]=(newOffset);
 			
+		}else if(arrowSelected!==undefined && Aselect!==undefined){
+			
+			WrittingTo={circle:Aselect, arrow:arrowSelected};
+		
 		}else if(Cselect!==undefined && !moving){
 			Cselect.posX=mX;
 			Cselect.posY=mY;
 			moving=true;
+			
+			WrittingTo={circle:Cselect};
+			
+		}else{
+			WrittingTo=undefined;
 		}
 		
 		updateCanvas();
@@ -95,7 +117,7 @@ function loadCanvas(){
 			A=undefined;
 		else if(A!==undefined && Cselect!==undefined){
 			B=Cselect;
-			A.connections.push([B,0]);
+			A.connections.push([B,0,""]);
 			B=undefined;
 			A=undefined;
 			Cselect=undefined;
@@ -105,9 +127,63 @@ function loadCanvas(){
 		
 	}
 	
+	document.body.onkeydown=function(ev){
+		if( WrittingTo!==undefined ){
+			
+			let keycode=parseInt(ev.which);
+			
+			if(WrittingTo.hasOwnProperty("arrow")){
+				 if(keycode==8 || keycode==46){
+					 ev.preventDefault();
+					 let textBuffer=WrittingTo.circle.connections[WrittingTo.arrow][2];
+					 textBuffer=textBuffer.slice(0,textBuffer.length-1);
+					 WrittingTo.circle.connections[WrittingTo.arrow][2]=textBuffer;
+				 }
+			}else{
+				 if(keycode==8 || keycode==46){
+					 ev.preventDefault();
+					 let textBuffer=WrittingTo.circle.text;
+					 textBuffer=textBuffer.slice(0,textBuffer.length-1);
+					 WrittingTo.circle.text=textBuffer;
+				 }
+			}
+		}
+		updateCanvas();
+	}
+	
 	document.body.onkeypress=function(ev){
-		if(ev.key="D" && Cselect!==undefined){
+		let key=String.fromCharCode(ev.which);
+		
+		 if( WrittingTo!==undefined ){
+			 
+			 
+			 if(WrittingTo.hasOwnProperty("arrow")){
+				 
+				 let textBuffer=WrittingTo.circle.connections[WrittingTo.arrow][2];
+				 if(ev.which!==8)
+					textBuffer+=key;
+
+				 WrittingTo.circle.connections[WrittingTo.arrow][2]=textBuffer;
+
+					if(parseInt(ev.which)==32)
+					 ev.preventDefault();
+			 
+			 }else{
+				 let textBuffer=WrittingTo.circle.text;
+				 if(ev.which!==8)
+					textBuffer+=key;
+
+				 WrittingTo.circle.text=textBuffer;
+
+					if(parseInt(ev.which)==32)
+					 ev.preventDefault();
+			 }
+			 
+			 	
+		} else if(key=='d' && Cselect!==undefined){
 			gDeletedIndex=Cselect.index;
+		} else if(key=='d' && arrowSelected!==undefined){
+			aDeletedIndex=arrowSelected;
 		}
 		
 		updateCanvas();
@@ -130,19 +206,19 @@ function updateCanvas(){
 		cv.stroke();
 	}
 	
-	Cselect=undefined;
-	Aselect=undefined;
+		Cselect=undefined;
+		Aselect=undefined;
+		arrowSelected=undefined;
 	
 	//Arriba va todo lo que se hace ANTES de dibujar los círculos
 	for(let i=0;i<circles.length;i++){
 		circlesActions(circles[i],i,circles);
 	}
 
-	if(gDeletedIndex!==undefined){
+	if(gDeletedIndex!==undefined || aDeletedIndex!==undefined){
 		deleteCircles();
 	}
 	
-	console.log("fin de forEach");
 	//Abajo va todo lo que se hace DESPUES de dibujar los círculos
 	//Y usar las variables globales
 	
@@ -158,6 +234,8 @@ function circlesActions(circle,index,array){
 		circle.draw();
 		circle.checkHover();
 		
+		console.log(circle.connections);
+		
 		cv.strokeText("o",mX-2,mY+2);
 	}
 }
@@ -165,23 +243,30 @@ function circlesActions(circle,index,array){
 //Función para eliminar círculos
 function deleteCircles(){
 	
-	//Eliminamos el círculo de la lista de adyacencias de cada círculo
-	circles.forEach((el,i,a)=>{
-		for(let j=0;j<el.connections.length;j++){
-			if(el.connections[j][0].index==gDeletedIndex){
-				el.connections.splice(j,1); 
-				j--;
+	if(gDeletedIndex!==undefined){
+		
+		//Eliminamos el círculo de la lista de adyacencias de cada círculo
+		circles.forEach((el,i,a)=>{
+			for(let j=0;j<el.connections.length;j++){
+				if(el.connections[j][0].index==gDeletedIndex){
+					el.connections.splice(j,1); 
+					j--;
+				}
 			}
-		}
-	});
-	
-	//Eliminamos el círculo de la lista global de círculos
-	circles.splice(gDeletedIndex,1);
-	gDeletedIndex=undefined;
-	
-	//Actualizamos los índices de cada círculo
-	circles.forEach((el,i,a)=>el.index=i);
-	
+		});
+
+		//Eliminamos el círculo de la lista global de círculos
+		circles.splice(gDeletedIndex,1);
+		gDeletedIndex=undefined;
+
+		//Actualizamos los índices de cada círculo
+		circles.forEach((el,i,a)=>el.index=i);
+
+	} else if(aDeletedIndex!==undefined){
+		Aselect.connections.splice(aDeletedIndex,1);
+		Aselect=undefined;
+		aDeletedIndex=undefined;
+	}
 	updateCanvas();
 	
 }
@@ -210,7 +295,9 @@ function Circle(radius,posX,posY,index){
 	this.rad=radius;
 	this.posX=posX;
 	this.posY=posY;
-	this.selected=false;
+	this.type=0; //0=normal, 1=inicio, 2=final.
+	this.text="";
+	//this.selected=false; Unused at this time
 	this.color="aliceblue";
 	this.arrowcol="black";
 	this.connections=[]; //Circle connections [Circle, offset, character]
@@ -222,11 +309,36 @@ function Circle(radius,posX,posY,index){
 		cv.lineWidth=2;
 		cv.stroke();
 		cv.fill();
+		
+		if(this.type===2){
+			cv.lineWidth=1;
+			cv.beginPath();
+				cv.arc(this.posX,this.posY,this.rad*0.85,0,2*Math.PI);
+			cv.closePath();
+			cv.stroke();
+		} else if(this.type===1){
+			cv.fillStyle="white";
+			cv.beginPath();
+				cv.moveTo(this.posX-this.rad,this.posY);
+				cv.lineTo(this.posX-this.rad*1.5,this.posY+this.rad/2);
+				cv.lineTo(this.posX-this.rad*1.5,this.posY-this.rad/2);
+				cv.lineTo(this.posX-this.rad,this.posY);
+			cv.closePath();
+			cv.stroke();
+			cv.fill();
+			cv.fillStyle=this.color;
+		}
+		
 		for(let i=0;i<this.connections.length;i++){
 			this.checkArrowHover(this.connections[i][0],this.connections[i][1],i);
-			this.drawArrow(this.connections[i][0],this.connections[i][1]);
-			
+			this.drawArrow(this.connections[i][0],this.connections[i][1],this.connections[i][2]);
 		}
+		
+		cv.font="20px Segoe UI";
+		cv.fillStyle="black";
+				cv.fillText(this.text,this.posX-(this.text.length*4), this.posY+5, 1000);
+		cv.fillStyle=this.color;
+		
 		//console.log(this.connections);
 	}
 	this.checkHover=function(){
@@ -274,62 +386,58 @@ function Circle(radius,posX,posY,index){
 	}
 	
 	//Second connect function
-	this.drawArrow=function(B,offset){
+	this.drawArrow=function(B,offset,text){
 		
 		//SI, así es, tuve que buscar cómo rotar puntos sólo para que se vieran bien
 		//Las flechitas...
 		
-		let angles=getAngles(this,B,offset);
-		
-		let xA=angles.xA, yA=angles.yA, xB=angles.xB, yB=angles.yB;
-		let theta=angles.theta;
-		
-		cv.fillStyle=this.arrowcol;
-		cv.strokeStyle=this.arrowcol;
-		cv.lineWidth=0.5;
-		cv.beginPath();
-			cv.moveTo(xA,yA);
-			cv.lineTo(xB,yB);
-			if(this.posX>B.posX){
+			let angles=getAngles(this,B,offset);
 
-				/*ROTACIÓN DE LOS PUNTOS (x1+6,y 1-3) y (x1+6,y1+3)*/
-				
-				let l1=rotate((xB+8),(yB-4),xB,yB,theta);
-				let l2=rotate((xB+8),(yB+4),xB,yB,theta);
-				
-				cv.lineTo(xB+l1.nx,yB+l1.ny);
-				cv.lineTo(xB+l2.nx,yB+l2.ny);
-				cv.lineTo(xB,yB);
-			}else{
+			let xA=angles.xA, yA=angles.yA, xB=angles.xB, yB=angles.yB, xC=angles.xC, yC=angles.yC;
+			let theta=angles.theta;
 
-				/*ROTACIÓN DE LOS PUNTOS (x1-6,y1+3) y (x1-6,y1-3)*/
+			cv.fillStyle=this.arrowcol;
+			cv.strokeStyle=this.arrowcol;
+			cv.lineWidth=0.5;
+			cv.beginPath();
+				cv.moveTo(xA,yA);
+		
+				if(B!=this){
+					cv.lineTo(xB,yB);
+				}else{
+					xC=this.posX+this.rad;
+					yC=this.posY+this.rad;
+				}
+				if(this.posX>B.posX){
 
-				let l1=rotate((xB-8),(yB+4),xB,yB,theta);
-				let l2=rotate((xB-8),(yB-4),xB,yB,theta);
+					/*ROTACIÓN DE LOS PUNTOS (x1+6,y 1-3) y (x1+6,y1+3)*/
 
-				cv.lineTo(xB+l1.nx,yB+l1.ny);
-				cv.lineTo(xB+l2.nx,yB+l2.ny);
-				cv.lineTo(xB,yB);
-			}
-		
-		cv.closePath();
-		cv.stroke();
-		cv.fill();
-		cv.strokeStyle="black";
-		
-		//dibujar unos círculos para ocultar las puntas de las flechas
-		cv.beginPath();
-			cv.arc(this.posX,this.posY,this.rad-1,0,Math.PI*2);
-		cv.closePath();
-		cv.fillStyle=this.color;
-		cv.fill();
-		
-		cv.beginPath();
-			cv.arc(B.posX,B.posY,B.rad-1,0,Math.PI*2);
-		cv.closePath();
-		cv.fillStyle=B.color;
-		cv.fill();
-		
+					let l1=rotate((xB+8),(yB-4),xB,yB,theta);
+					let l2=rotate((xB+8),(yB+4),xB,yB,theta);
+
+					cv.lineTo(xB+l1.nx,yB+l1.ny);
+					cv.lineTo(xB+l2.nx,yB+l2.ny);
+					cv.lineTo(xB,yB);
+				}else{
+
+					/*ROTACIÓN DE LOS PUNTOS (x1-6,y1+3) y (x1-6,y1-3)*/
+
+					let l1=rotate((xB-8),(yB+4),xB,yB,theta);
+					let l2=rotate((xB-8),(yB-4),xB,yB,theta);
+
+					cv.lineTo(xB+l1.nx,yB+l1.ny);
+					cv.lineTo(xB+l2.nx,yB+l2.ny);
+					cv.lineTo(xB,yB);
+				}
+
+			cv.closePath();
+			cv.stroke();
+			cv.fill();
+			cv.strokeStyle="black";
+
+			//Mostrar la cadena centrada en la flecha
+			cv.font="20px Segoe UI";
+				cv.fillText(text,xC-(text.length*4), yC-5, 1000);		
 	}
 }
 	
@@ -365,7 +473,7 @@ function getAngles(A,B,offset){
 
 	//Puntos iniciales y finales de las flechas, según estén a la izquierda o derecha
 	
-	let xA,xB,yA,yB;
+	let xA,xB,yA,yB,xC,yC;
 	
 	//NO se que putas hice, pero me puse a jugar con los signos
 	//Hasta que quedó
@@ -374,12 +482,21 @@ function getAngles(A,B,offset){
 		xB=B.rad*(-Math.cos(offsetThetaB))+B.posX;
 		yA=A.rad*(-Math.sin(offsetThetaA))+A.posY;
 		yB=B.rad*(Math.sin(offsetThetaB))+B.posY;
+		
+		xC=(distPPoint(xA,yA,xB,yB)/2*Math.cos(theta)+xA);
+		yC=(distPPoint(xA,yA,xB,yB)/2*Math.sin(-theta)+yA);
+		
 	}else{
 		xA=A.rad*(-Math.cos(offsetThetaA))+A.posX;
 		xB=B.rad*(Math.cos(offsetThetaB))+B.posX;
 		yA=A.rad*(Math.sin(offsetThetaA))+A.posY;
 		yB=B.rad*(-Math.sin(offsetThetaB))+B.posY;
+		
+		xC=(-distPPoint(xA,yA,xB,yB)/2*Math.cos(theta)+xA);
+		yC=(distPPoint(xA,yA,xB,yB)/2*Math.sin(theta)+yA);
 	}
+	
+	
 	
 	return {
 		//Offset de A
@@ -403,7 +520,11 @@ function getAngles(A,B,offset){
 		//Punto inicial de la flecha en A
 		yA,
 		//Punto final de la flecha en B
-		yB
+		yB,
+		//Posición X de la cadena
+		xC,
+		//Posición Y de la cadena
+		yC
 	};
 	
 }
