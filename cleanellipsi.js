@@ -358,7 +358,7 @@ function Circle(radius,posX,posY,index){
 		
 		cv.font="20px Consolas";
 		cv.fillStyle="black";
-				cv.fillText(this.text,this.posX-(this.text.length*4), this.posY+5, 1000);
+				cv.fillText(this.text,this.posX-(this.text.length*5.5), this.posY+5, 1000);
 		cv.fillStyle=this.color;
 		
 	}
@@ -384,7 +384,7 @@ function Circle(radius,posX,posY,index){
 			xA=this.posX+this.rad/2;	
 			yA=this.posY-this.rad;
 			
-			let dist=distPPoint(mX,mY,xA,yA);
+			let dist=distPPoint(mX,mY,xA+10,yA-10);
 		
 			if(dist<=(20)){
 				this.arrowcol="red";
@@ -457,7 +457,11 @@ function Circle(radius,posX,posY,index){
 			
 			cv.font="12px Consolas";
 			cv.fillStyle=this.arrowcol;
-			cv.fillText(this.text+":"+text, xA, yA);
+			cv.fillText(this.text+":"+text, xA+5, yA-5);
+			cv.beginPath();
+				//cv.arc(xA+10,yA-10,15,0,2*Math.PI);
+			cv.closePath();
+			cv.stroke();
 			return;
 		}else{
 			angles=getAngles(this,B,offset);
@@ -506,8 +510,8 @@ function Circle(radius,posX,posY,index){
 			cv.strokeStyle="black";
 
 			//Mostrar la cadena centrada en la flecha
-			cv.font="20px Segoe UI";
-				cv.fillText(text,xC-(text.length*4), yC-5, 1000);		
+			cv.font="20px Consolas";
+				cv.fillText(text,xC-(text.length*5.5), yC-5, 1000);		
 	}
 }
 	
