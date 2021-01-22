@@ -23,6 +23,7 @@ function loadCanvas(){
 	
 	can.onmousemove=function(ev){
 		
+		//Actulizar el canvas, sólo cundo algo se mueve
 		updateCanvas();
 		
 		mX=ev.pageX-5;	//Mouse X
@@ -31,8 +32,10 @@ function loadCanvas(){
 		if(moving && Cselect!==undefined){
 			Cselect.posX=mX;
 			Cselect.posY=mY;
-			snap(Cselect);
+			snap(Cselect); //snap to another node
 		}else if(moving && Aselect!==undefined){
+			
+			//Función para poder mover las flechas
 			
 			//El nuevo offset será el valor entre -1,1
 			//obtenido por la distancia entre el mouse
@@ -52,6 +55,7 @@ function loadCanvas(){
 	}
 	
 	can.ondblclick=function(ev){
+		//Crear un nuevo nodo, o cambiar su tipo de nodo
 		if(ev.button==0){
 			if(Cselect===undefined)
 				circles.push(new Circle(35,mX,mY,circles.length));
@@ -70,7 +74,7 @@ function loadCanvas(){
 		
 	can.onmousedown=function(ev){
 		if(ev.shiftKey && Cselect!==undefined){
-			A=Cselect;
+			A=Cselect; //Seleccionar el primer nodo a unir
 		}else if(ev.ctrlKey && arrowSelected!==undefined && Aselect!==undefined && !moving){
 			moving=true;
 			
@@ -91,16 +95,31 @@ function loadCanvas(){
 			
 		}else if(arrowSelected!==undefined && Aselect!==undefined){
 			
+			//Verifica si se ha seleccionado una flecha, y la selecciona para escribir en ella
+			//Además de des-seleccionar el anterior
+			
+			if(WrittingTo!==undefined && WrittingTo.hasOwnProperty("circle"))
+				WrittingTo.circle.selected=false;
+			
 			WrittingTo={circle:Aselect, arrow:arrowSelected};
 		
 		}else if(Cselect!==undefined && !moving){
-			Cselect.posX=mX;
-			Cselect.posY=mY;
 			moving=true;
 			
+			//Lo mismo que arriba, pero para nodos
+			
+			if(WrittingTo!==undefined && WrittingTo.hasOwnProperty("circle"))
+				WrittingTo.circle.selected=false;
+			
 			WrittingTo={circle:Cselect};
+			Cselect.selected=true;
 			
 		}else{
+			
+			//Reset, des-selecciona todo
+			
+			if(WrittingTo!==undefined && WrittingTo.hasOwnProperty("circle"))
+				WrittingTo.circle.selected=false;
 			WrittingTo=undefined;
 		}
 		
@@ -113,11 +132,13 @@ function loadCanvas(){
 		Aselect=undefined;
 		arrowSelected=undefined;
 		
+		//Igual, des-selecciona muchas cosas, pero si al levantar el mouse, estamos sobre otro circulo, se crea una unión
+		
 		if(Cselect==undefined)
 			A=undefined;
 		else if(A!==undefined && Cselect!==undefined){
 			B=Cselect;
-			A.connections.push([B,0,""]);
+			A.connections.push([B,0,"λ"]);
 			B=undefined;
 			A=undefined;
 			Cselect=undefined;
@@ -127,6 +148,7 @@ function loadCanvas(){
 		
 	}
 	
+	//Esto es para poder escribir dentro dentro del canvas (especificamente, borrar)
 	document.body.onkeydown=function(ev){
 		if( WrittingTo!==undefined ){
 			
@@ -151,6 +173,7 @@ function loadCanvas(){
 		updateCanvas();
 	}
 	
+	//Igual aquí (especificamente, escribir)
 	document.body.onkeypress=function(ev){
 		let key=String.fromCharCode(ev.which);
 		
@@ -160,6 +183,7 @@ function loadCanvas(){
 			 if(WrittingTo.hasOwnProperty("arrow")){
 				 
 				 let textBuffer=WrittingTo.circle.connections[WrittingTo.arrow][2];
+				 if(textBuffer=='λ') textBuffer="";
 				 if(ev.which!==8)
 					textBuffer+=key;
 
@@ -179,7 +203,7 @@ function loadCanvas(){
 					 ev.preventDefault();
 			 }
 			 
-			 	
+			//Marcar para eliminar una flecha o círculo
 		} else if(key=='d' && Cselect!==undefined){
 			gDeletedIndex=Cselect.index;
 		} else if(key=='d' && arrowSelected!==undefined){
@@ -233,8 +257,6 @@ function circlesActions(circle,index,array){
 		
 		circle.draw();
 		circle.checkHover();
-		
-		console.log(circle.connections);
 		
 		cv.strokeText("o",mX-2,mY+2);
 	}
@@ -297,12 +319,12 @@ function Circle(radius,posX,posY,index){
 	this.posY=posY;
 	this.type=0; //0=normal, 1=inicio, 2=final.
 	this.text="";
-	//this.selected=false; Unused at this time
+	this.selected=false;
 	this.color="aliceblue";
 	this.arrowcol="black";
 	this.connections=[]; //Circle connections [Circle, offset, character]
 	this.draw= function(){
-		cv.fillStyle=this.color;
+		cv.fillStyle=(this.selected?"aquamarine":this.color);
 		cv.beginPath();
 			cv.arc(this.posX,this.posY,this.rad,0,2*Math.PI);
 		cv.closePath();
@@ -334,14 +356,13 @@ function Circle(radius,posX,posY,index){
 			this.drawArrow(this.connections[i][0],this.connections[i][1],this.connections[i][2]);
 		}
 		
-		cv.font="20px Segoe UI";
+		cv.font="20px Consolas";
 		cv.fillStyle="black";
 				cv.fillText(this.text,this.posX-(this.text.length*4), this.posY+5, 1000);
 		cv.fillStyle=this.color;
 		
-		//console.log(this.connections);
 	}
-	this.checkHover=function(){
+	this.checkHover=function(posX,posY){
 		let dist=distPPoint(mX,mY,this.posX,this.posY);
 		
 		if(dist<=(this.rad)){
@@ -355,9 +376,37 @@ function Circle(radius,posX,posY,index){
 	}
 		
 	this.checkArrowHover=function(B, offset, index){
-
-		let angles=getAngles(this,B,offset);
-		let xA=angles.xA,yA=angles.yA,xB=angles.xB,yB=angles.yB;
+		
+		let angles;
+		let xA,xB,yA,yB;
+		
+		if(this==B){
+			xA=this.posX+this.rad/2;	
+			yA=this.posY-this.rad;
+			
+			let dist=distPPoint(mX,mY,xA,yA);
+		
+			if(dist<=(20)){
+				this.arrowcol="red";
+				arrowSelected=index;
+				Aselect=this;
+			}
+			else{
+				if(WrittingTo!==undefined && WrittingTo.hasOwnProperty("arrow")){
+				if(WrittingTo.arrow==index && WrittingTo.circle==this)
+					this.arrowcol="blue";
+				else
+					this.arrowcol="black";
+				}else
+					this.arrowcol="black";
+			}
+			
+			return;
+			
+		}else{
+			angles=getAngles(this,B,offset);
+			xA=angles.xA,yA=angles.yA,xB=angles.xB,yB=angles.yB
+		}
 		
 		//Colision de un "rectángulo" (que al final, es un círculo)
 		
@@ -379,7 +428,13 @@ function Circle(radius,posX,posY,index){
 			arrowSelected=index;
 			Aselect=this;
 		}else{
-			this.arrowcol="black";
+			if(WrittingTo!==undefined && WrittingTo.hasOwnProperty("arrow")){
+				if(WrittingTo.arrow==index && WrittingTo.circle==this)
+					this.arrowcol="blue";
+				else
+					this.arrowcol="black";
+			}else
+				this.arrowcol="black";
 		}
 		
 		
@@ -391,9 +446,24 @@ function Circle(radius,posX,posY,index){
 		//SI, así es, tuve que buscar cómo rotar puntos sólo para que se vieran bien
 		//Las flechitas...
 		
-			let angles=getAngles(this,B,offset);
+		let angles;
+		let xA,xB,yA,yB,xC,yC;
+		
+		if(text=="" || text=="\n" || text=="\t" || text=="\s") text="λ";
+		
+		if(this==B){
+			xA=this.posX+this.rad/2;	
+			yA=this.posY-this.rad;
+			
+			cv.font="12px Consolas";
+			cv.fillStyle=this.arrowcol;
+			cv.fillText(this.text+":"+text, xA, yA);
+			return;
+		}else{
+			angles=getAngles(this,B,offset);
+			xA=angles.xA, yA=angles.yA, xB=angles.xB, yB=angles.yB, xC=angles.xC, yC=angles.yC;
+		}
 
-			let xA=angles.xA, yA=angles.yA, xB=angles.xB, yB=angles.yB, xC=angles.xC, yC=angles.yC;
 			let theta=angles.theta;
 
 			cv.fillStyle=this.arrowcol;
