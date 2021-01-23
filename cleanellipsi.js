@@ -251,6 +251,17 @@ function updateCanvas(){
 
 /*Funciones lógicas*/
 
+//Función para exportar el Canvas
+function downloadCanvas(elem){
+	let img=can.toDataURL("image/png");
+	let displayImage=img.src;
+	
+	let a=document.createElement("a");
+	a.href=img;
+	a.download="Your-AFD.png";
+	a.click();
+}
+
 //Función para circles.forEach
 function circlesActions(circle,index,array){
 	if(circle!=null || typeof(circle) !='undefined'){

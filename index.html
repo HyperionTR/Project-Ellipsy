@@ -84,14 +84,14 @@
 
 	<body onload="loadCanvas();">
 	
-		<canvas width="2000px" height="1000px" align="center" id="drawArea"></canvas>
+		<canvas width="2000px" height="1500px" align="center" id="drawArea"></canvas>
 		
 		<div class="input-container">
 			
 			<div class="toolbar">
-				<button alt="Exportar" title="Exportar" class="exportar"></button>
+				<button alt="Exportar" title="Exportar" class="exportar" onclick="downloadCanvas()"></button>
 				<input type="text" id="evaluate" title="Texto a evaluar" placeholder="Texto a evaluar...">
-				<button alt="Evaluar" title="Evaluar" class="evaluar" onclick="getAlphabet()"></button>
+				<button alt="Evaluar" title="Evaluar" class="evaluar" onclick="evaluateString()"></button>
 			</div>
 			
 		</div>
