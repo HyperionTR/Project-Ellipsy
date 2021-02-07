@@ -11,6 +11,9 @@ let gDeletedIndex; //Índice global del círculo elminado
 let aDeletedIndex;
 let circles=[]; //Arreglo global de círculos
 
+let Nfont=""; //Fuente normal del OS
+let MSfont=""; //Fuente mono espaciada del OS
+
 let A,B; //Círculos A y B temporales, a unir con una flecha
 
 /*Funciones de carga*/
@@ -20,7 +23,14 @@ function loadCanvas(){
 	cW=can.width;
 	cH=can.height;
 	cv=can.getContext("2d");
-	
+		
+	//We get the OS and select a font for that
+	console.log(window.navigator.oscpu);
+	if(window.navigator.oscpu.includes("Linux")){
+		Nfont="Ubuntu";
+		MSfont="Ubuntu Mono";
+	}
+
 	can.onmousemove=function(ev){
 		
 		//Actulizar el canvas, sólo cundo algo se mueve
@@ -269,7 +279,7 @@ function circlesActions(circle,index,array){
 		circle.draw();
 		circle.checkHover();
 		
-		cv.strokeText("o",mX-2,mY+2);
+		cv.strokeText("",mX-2,mY+2); //Necesario paara pre-cargar la fuente
 	}
 }
 
@@ -367,9 +377,9 @@ function Circle(radius,posX,posY,index){
 			this.drawArrow(this.connections[i][0],this.connections[i][1],this.connections[i][2]);
 		}
 		
-		cv.font="20px Consolas";
+		cv.font="20px 'Ubuntu Mono'";
 		cv.fillStyle="black";
-				cv.fillText(this.text,this.posX-(this.text.length*5.5), this.posY+5, 1000);
+				cv.fillText(this.text,this.posX-(this.text.length*5), this.posY+5, 1000);
 		cv.fillStyle=this.color;
 		
 	}
@@ -466,7 +476,7 @@ function Circle(radius,posX,posY,index){
 			xA=this.posX+this.rad/2;	
 			yA=this.posY-this.rad;
 			
-			cv.font="12px Consolas";
+			cv.font="12px 'Ubuntu Mono'";
 			cv.fillStyle=this.arrowcol;
 			cv.fillText(this.text+":"+text, xA+5, yA-5);
 			cv.beginPath();
@@ -521,7 +531,7 @@ function Circle(radius,posX,posY,index){
 			cv.strokeStyle="black";
 
 			//Mostrar la cadena centrada en la flecha
-			cv.font="20px Consolas";
+			cv.font="20px 'Ubuntu'";
 				cv.fillText(text,xC-(text.length*5.5), yC-5, 1000);		
 	}
 }
