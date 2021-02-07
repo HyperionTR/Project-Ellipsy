@@ -25,11 +25,11 @@ function loadCanvas(){
 	cv=can.getContext("2d");
 		
 	//We get the OS and select a font for that
-	console.log(window.navigator.oscpu);
+	/*console.log(window.navigator.oscpu);
 	if(window.navigator.oscpu.includes("Linux")){
 		Nfont="Ubuntu";
 		MSfont="Ubuntu Mono";
-	}
+	}*/
 
 	can.onmousemove=function(ev){
 		
@@ -261,15 +261,81 @@ function updateCanvas(){
 
 /*Funciones lógicas*/
 
+//Funcion para obtener el boundingBox
+function getBoundingBox(){
+	
+	//Inicializamos el mínimo y el máximo
+	let maxX=minX=circles[0].posX;
+	let maxY=minY=circles[0].posY;
+	let leftRad,rightRad,upRad,downRad; //Los radios de los circulos que delimitan el Bounding Box
+	
+	circles.forEach((el,i,a)=>{
+		if(el.posX>=maxX){
+			maxX=el.posX;
+			rightRad=el.rad;
+		}
+		if(el.posX<=minX){
+			minX=el.posX;
+			leftRad=el.rad;
+		}
+		if(el.posY>=maxY){
+			maxY=el.posY;
+			downRad=el.rad;
+		}
+		if(el.posY<=minY){
+			minY=el.posY;
+			upRad=el.rad;
+		}
+	});
+	
+	return {up:minY,down:maxY,left:minX,right:maxX,upRad,downRad,leftRad,rightRad};
+	
+}
+
 //Función para exportar el Canvas
-function downloadCanvas(elem){
-	let img=can.toDataURL("image/png");
-	let displayImage=img.src;
+function downloadCanvas(margin=2,sc=2){
+	
+	let BB=getBoundingBox();
+	
+	/*
+	Est vez, creo 2 canvas offscreen (ocultos) nuevos:
+	> Uno es para re-dibujar los contenidos del canvas "normal", pero con un tamaño mayor
+	> El segundo es para obtener un "cacho" del segundo canvas y poder exportar ese único trozo
+	*/
+	
+	let can2=document.createElement("canvas"); //Creamos el segundo canvas
+	let cv2=can2.getContext("2d");
+	
+	cv=cv2; //Para que todo lo dibujado en el primer canvas, se haga en el segundo
+	
+	//Todo lo que se haga en el segundo y en el tercero, estará multiplicado
+	//Por SC (la escala)
+	can2.width=can.width*sc;
+	can2.height=can.height*sc;  
+	
+	cv2.scale(sc,sc);
+	
+	updateCanvas(); //Re-dibujado
+	
+	let can3=document.createElement("canvas"); //Creamos el canvas de buffer que contiene sólo el area que queremos
+	
+	//Obtenemos los datos de imágen de un porción del canvas
+	let img=cv.getImageData((BB.left-BB.leftRad-margin)*sc,(BB.up-BB.upRad-margin)*sc,(BB.right-BB.left+BB.leftRad+BB.rightRad+margin*2)*sc,(BB.down-BB.up+BB.downRad+BB.upRad+margin*2)*sc);
+	
+	can3.width=((BB.right-BB.left)+BB.leftRad+BB.rightRad+margin*2)*sc;
+	can3.height=((BB.down-BB.up)+BB.downRad+BB.upRad+margin*2)*sc;
+	can3.getContext("2d").putImageData(img,0,0); //Y esos datos de imágen los pasamos al tercer canvas
+	
+	let dataurl=can3.toDataURL("image/png");
+	let displayImage=dataurl.src;
 	
 	let a=document.createElement("a");
-	a.href=img;
+	a.href=dataurl;
 	a.download="Your-AFD.png";
 	a.click();
+	
+	//Y volvemos a la normalidad
+	cv=can.getContext("2d");
 }
 
 //Función para circles.forEach
@@ -279,6 +345,7 @@ function circlesActions(circle,index,array){
 		circle.draw();
 		circle.checkHover();
 		
+		cv.font="20px 'Ubuntu'";
 		cv.strokeText("",mX-2,mY+2); //Necesario paara pre-cargar la fuente
 	}
 }
